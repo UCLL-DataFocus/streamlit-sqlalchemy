@@ -264,7 +264,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         filter_by: Optional[dict] = None,
         except_columns: Optional[list] = None,
         select_column = True,
-        create_tab = True,
+        create_tab_bool = True,
         *,
         border: bool = False,
     ):
@@ -282,7 +282,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         User.st_crud_tabs(defaults={"fullname": "John Doe"})
         ```
         """
-        if create_tab:
+        if create_tab_bool:
             create_tab, update_tab = st.tabs(
                 [
                     f"Create {cls.st_pretty_class()}",
