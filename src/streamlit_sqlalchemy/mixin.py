@@ -208,6 +208,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         cls,
         filter_by: Optional[dict] = None,
         except_columns: Optional[list] = None,
+        select_column = True,
         *,
         border: bool = False,
     ):
@@ -218,12 +219,15 @@ class StreamlitAlchemyMixin(mixin_parent):
         :param except_columns: A list of column names to exclude from the form.
         :param border: Whether or not to display a border around the form.
         """
-        selected_obj_to_update = st.selectbox(
-            f"Select {cls.st_pretty_class()} to Update",
-            cls.st_list_all(filter_by=filter_by),
-            index=None,
-            format_func=lambda obj: _st_repr(obj),
-        )
+        if select_column:
+            selected_obj_to_update = st.selectbox(
+                f"Select {cls.st_pretty_class()} to Update",
+                cls.st_list_all(filter_by=filter_by),
+                index=None,
+                format_func=lambda obj: _st_repr(obj),
+            )
+        else:
+            selected_obj_to_update = cls.st_list_all(filter_by=filter_by)[0]
         if selected_obj_to_update:
             selected_obj_to_update: cls
             if selected_obj_to_update.st_update_form(
@@ -259,6 +263,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         defaults: Optional[dict] = None,
         filter_by: Optional[dict] = None,
         except_columns: Optional[list] = None,
+        select_column = True,
         *,
         border: bool = False,
     ):
@@ -286,7 +291,7 @@ class StreamlitAlchemyMixin(mixin_parent):
             cls.st_create_form(defaults=defaults, border=border)
         with update_tab:
             cls.st_update_select_form(
-                filter_by=filter_by, except_columns=except_columns, border=border
+                filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
             )
 
     @classmethod
