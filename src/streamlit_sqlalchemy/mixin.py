@@ -585,7 +585,8 @@ class StreamlitAlchemyMixin(mixin_parent):
             if submitted:
                 for field in set(kwargs) - set(except_columns):
                     if field.endswith("_id") and kwargs[field]:
-                        kwargs[field] = kwargs[field].id
+                        if not(field.endswith("org_id")):
+                            kwargs[field] = kwargs[field].id
                 self._st_update(**kwargs)
         return submitted
 
