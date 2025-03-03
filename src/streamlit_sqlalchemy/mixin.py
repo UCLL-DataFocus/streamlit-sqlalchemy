@@ -265,6 +265,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         except_columns: Optional[list] = None,
         select_column = True,
         create_tab_bool = True,
+        only_create_bool = False,
         *,
         border: bool = False,
     ):
@@ -283,18 +284,23 @@ class StreamlitAlchemyMixin(mixin_parent):
         ```
         """
         if create_tab_bool:
-            create_tab, update_tab = st.tabs(
-                [
-                    f"Create {cls.st_pretty_class()}",
-                    f"Update {cls.st_pretty_class()}",
-                ]
-            )
-            with create_tab:
+            if only_create_bool:
+                st.write(f"Create {cls.st_pretty_class()}")
+            
                 cls.st_create_form(defaults=defaults, border=border)
-            with update_tab:
-                cls.st_update_select_form(
-                    filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
+            else:
+                create_tab, update_tab = st.tabs(
+                    [
+                        f"Create {cls.st_pretty_class()}",
+                        f"Update {cls.st_pretty_class()}",
+                    ]
                 )
+                with create_tab:
+                    cls.st_create_form(defaults=defaults, border=border)
+                with update_tab:
+                    cls.st_update_select_form(
+                        filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
+                    )
         else:
             st.write(f"Update {cls.st_pretty_class()}")
             
