@@ -360,11 +360,11 @@ class StreamlitAlchemyMixin(mixin_parent):
             return enum_selectbox
 
         if isinstance(column.type, SqlInteger):
-            default = get_default_value(column, default=0)
+            default = get_default_value(column, default=50)
 
             def number_input(label, value=None):
                 value = value if value is not None else default
-                return st.number_input(label, value=value, step=1, help=column.doc)
+                return st.slider(label + " (0-100%)", 0, 100, value=value)            
 
             return number_input
 
