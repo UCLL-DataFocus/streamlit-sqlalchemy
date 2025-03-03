@@ -276,11 +276,10 @@ class StreamlitAlchemyMixin(mixin_parent):
         User.st_crud_tabs(defaults={"fullname": "John Doe"})
         ```
         """
-        create_tab, update_tab, delete_tab = st.tabs(
+        create_tab, update_tab = st.tabs(
             [
                 f"Create {cls.st_pretty_class()}",
                 f"Update {cls.st_pretty_class()}",
-                f"Delete {cls.st_pretty_class()}",
             ]
         )
         with create_tab:
@@ -289,8 +288,6 @@ class StreamlitAlchemyMixin(mixin_parent):
             cls.st_update_select_form(
                 filter_by=filter_by, except_columns=except_columns, border=border
             )
-        with delete_tab:
-            cls.st_delete_select_form(filter_by=filter_by, border=border)
 
     @classmethod
     def _st_get_default_input_function(cls, column) -> Optional[InputFunction]:
