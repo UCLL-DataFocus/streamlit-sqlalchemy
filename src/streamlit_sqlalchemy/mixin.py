@@ -296,14 +296,9 @@ class StreamlitAlchemyMixin(mixin_parent):
                     filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
                 )
         else:
-            update_tab = st.tabs(
-                [
-                    f"Update {cls.st_pretty_class()}",
-                ]
-            )
-
-            with update_tab:
-                cls.st_update_select_form(
+            st.write(f"Update {cls.st_pretty_class()}")
+            
+            cls.st_update_select_form(
                     filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
                 )
 
