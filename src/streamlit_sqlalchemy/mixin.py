@@ -291,17 +291,23 @@ class StreamlitAlchemyMixin(mixin_parent):
             )
             with create_tab:
                 cls.st_create_form(defaults=defaults, border=border)
+            with update_tab:
+                cls.st_update_select_form(
+                    filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
+                )
         else:
             update_tab = st.tabs(
                 [
                     f"Update {cls.st_pretty_class()}",
                 ]
             )
-        with update_tab:
-            cls.st_update_select_form(
-                filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
-            )
 
+            with update_tab:
+                cls.st_update_select_form(
+                    filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
+                )
+
+    
     @classmethod
     def _st_get_default_input_function(cls, column) -> Optional[InputFunction]:
         """
