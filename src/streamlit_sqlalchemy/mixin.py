@@ -147,7 +147,7 @@ class StreamlitAlchemyMixin(mixin_parent):
 
     @classmethod
     def st_create_form(
-        cls, defaults: Optional[dict] = None, *, border: bool = False
+        cls, filter_by: Optional[dict] = None, defaults: Optional[dict] = None, *, filter_by_is_org_id = False, border: bool = False
     ) -> bool:
         """
         Renders a form to create a new object of this class.
@@ -163,6 +163,9 @@ class StreamlitAlchemyMixin(mixin_parent):
         if defaults is None:
             defaults = {}
 
+        if filter_by_is_org_id and filter_by and "org_id" in filter_by:
+            defaults["org_id"] = filter_by["org_id"]
+        
         unique_hash = _get_unique_hash(**defaults)
         with st.form(
             f"create_{cls.__name__}_{unique_hash}", clear_on_submit=True, border=border
@@ -175,7 +178,7 @@ class StreamlitAlchemyMixin(mixin_parent):
                     kwargs.update({column.name: defaults[column.name]})
                     continue
 
-                input_function = cls._st_get_input_function(column)
+                input_function = cls._st_get_input_function(column, filter_by_is_org_id=filter_by_is_org_id, filter_by=filter_by)
                 kwargs.update(
                     {
                         column.name: input_function(
@@ -208,7 +211,8 @@ class StreamlitAlchemyMixin(mixin_parent):
         cls,
         filter_by: Optional[dict] = None,
         except_columns: Optional[list] = None,
-        select_column = True,
+        select_column=True,
+        filter_by_is_org_id=False,
         *,
         border: bool = False,
     ):
@@ -217,23 +221,38 @@ class StreamlitAlchemyMixin(mixin_parent):
 
         :param filter_by: A dictionary of keyword arguments to filter by.
         :param except_columns: A list of column names to exclude from the form.
+        :param select_column: Whether to allow selecting an object to update.
         :param border: Whether or not to display a border around the form.
         """
+        objects = cls.st_list_all(filter_by=filter_by)
+
+        if not objects:
+            st.warning(f"No {cls.st_pretty_class()} found to update.")
+            return
+
         if select_column:
             selected_obj_to_update = st.selectbox(
                 f"Select {cls.st_pretty_class()} to Update",
-                cls.st_list_all(filter_by=filter_by),
+                objects,
                 index=None,
                 format_func=lambda obj: _st_repr(obj),
             )
         else:
-            selected_obj_to_update = cls.st_list_all(filter_by=filter_by)[0]
+            selected_obj_to_update = objects[0]  # Ensure this is an instance
+
         if selected_obj_to_update:
-            selected_obj_to_update: cls
-            if selected_obj_to_update.st_update_form(
-                except_columns=except_columns, border=border
-            ):
-                st.rerun()
+            # Ensure selected_obj_to_update is an instance, not a class
+            if isinstance(selected_obj_to_update, cls):
+                if selected_obj_to_update.st_update_form(
+                    except_columns=except_columns, 
+                    filter_by=filter_by, 
+                    filter_by_is_org_id=filter_by_is_org_id, 
+                    border=border
+                ):
+                    st.rerun()
+            else:
+                st.error(f"Unexpected type: {type(selected_obj_to_update)}. Expected an instance of {cls}.")
+                
 
     @classmethod
     def st_delete_select_form(
@@ -265,7 +284,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         except_columns: Optional[list] = None,
         select_column = True,
         create_tab_bool = True,
-        only_create_bool = False,
+        filter_by_is_org_id = False,
         *,
         border: bool = False,
     ):
@@ -284,28 +303,23 @@ class StreamlitAlchemyMixin(mixin_parent):
         ```
         """
         if create_tab_bool:
-            if only_create_bool:
-                st.write(f"Create {cls.st_pretty_class()}")
-            
-                cls.st_create_form(defaults=defaults, border=border)
-            else:
-                create_tab, update_tab = st.tabs(
-                    [
-                        f"Create {cls.st_pretty_class()}",
-                        f"Update {cls.st_pretty_class()}",
-                    ]
+            create_tab, update_tab = st.tabs(
+                [
+                    f"Create {cls.st_pretty_class()}",
+                    f"Update {cls.st_pretty_class()}",
+                ]
+            )
+            with create_tab:
+                cls.st_create_form(filter_by=filter_by, defaults=defaults, filter_by_is_org_id=filter_by_is_org_id, border=border)
+            with update_tab:
+                cls.st_update_select_form(
+                    filter_by=filter_by, except_columns=except_columns, select_column=select_column, filter_by_is_org_id=filter_by_is_org_id, border=border
                 )
-                with create_tab:
-                    cls.st_create_form(defaults=defaults, border=border)
-                with update_tab:
-                    cls.st_update_select_form(
-                        filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
-                    )
         else:
             st.write(f"Update {cls.st_pretty_class()}")
             
             cls.st_update_select_form(
-                    filter_by=filter_by, except_columns=except_columns, select_column=select_column, border=border
+                    filter_by=filter_by, except_columns=except_columns, select_column=select_column, filter_by_is_org_id=filter_by_is_org_id, border=border
                 )
 
     
@@ -324,7 +338,7 @@ class StreamlitAlchemyMixin(mixin_parent):
         return None
 
     @classmethod
-    def _st_get_input_function(cls, column) -> InputFunction:
+    def _st_get_input_function(cls, column, **kwargs) -> InputFunction:
         """
         Returns an input function for the given column.
         """
@@ -332,6 +346,15 @@ class StreamlitAlchemyMixin(mixin_parent):
         if default_input is not None:
             return default_input
 
+        if column.name == "org_id" and kwargs.get("filter_by_is_org_id") and "org_id" in kwargs.get("filter_by", {}):
+            org_id_value = kwargs["filter_by"]["org_id"]
+            
+            def hidden_org_id_input(label, value=None):
+                """Hidden input field for `org_id` that doesn't display anything."""
+                return org_id_value
+            
+            return hidden_org_id_input
+        
         def get_default_value(column, default=None):
             return column.default.arg if column.default else default
 
@@ -375,13 +398,17 @@ class StreamlitAlchemyMixin(mixin_parent):
             return enum_selectbox
 
         if isinstance(column.type, SqlInteger):
-            default = get_default_value(column, default=50)
+            default_int = 50
+            if kwargs.get("filter_by_is_org_id"):
+                st.write('')# return int(kwargs["filter_by"]["org_id"])
+            else:
+                default = get_default_value(column, default=default_int)
 
-            def number_input(label, value=None):
-                value = value if value is not None else default
-                return st.slider(label + " (0-100%)", 0, 100, value=value)            
+                def number_input(label, value=None):
+                    value = value if value is not None else default
+                    return st.slider(label + " (0-100%)", 0, 100, value=value)            
 
-            return number_input
+                return number_input
 
         if isinstance(column.type, Float):
             default = get_default_value(column, default=0.0)
@@ -565,8 +592,9 @@ class StreamlitAlchemyMixin(mixin_parent):
             **kwargs,
         )
 
+
     def st_update_form(
-        self, except_columns: Optional[list] = None, *, border: bool = False
+        self, except_columns: Optional[list] = None, *, filter_by: Optional[dict] = None, filter_by_is_org_id = False, border: bool = False
     ) -> bool:
         """
         Renders a form to update this object.
@@ -591,11 +619,11 @@ class StreamlitAlchemyMixin(mixin_parent):
                 if column.name in except_columns:
                     continue
 
-                input_function = self._st_get_input_function(column)
+                input_function = self._st_get_input_function(column, filter_by_is_org_id=filter_by_is_org_id, filter_by=filter_by)
                 kwargs.update(
                     {
                         column.name: input_function(
-                            _get_pretty_column_name(column.name),
+                            _get_pretty_column_name(column.name), 
                             value=kwargs[column.name],
                         )
                     }
